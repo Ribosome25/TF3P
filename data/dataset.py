@@ -18,7 +18,7 @@ class ZINCH5Dataset(object):
         return (
             self.arrayh5_r[trch].mol_array[line],
             self.fph5_r[trch].mol_fp[line],
-            self.arrayh5_r[trch].mol_idx[line],
+            self.arrayh5_r[trch].mol_idx[line],  # array h5 包括 mol idx。这是什么？
         )
 
     def sample(self, num_samp=None, train_ratio=0.9, random_seed=1999):
@@ -56,7 +56,7 @@ class ZINCH5Dataloader(object):
         if data[-1]:
             idxs, fps = [], []
             nums_atoms, gs_charge, atom_type, pos = [], [], [], []
-            for array, fp, idx in data:
+            for array, fp, idx in data:  # see Dataset __getitem__
                 array = self.restore_flat_array(array)
                 nums_atoms.append(len(array[0]))
                 gs_charge += array[0]

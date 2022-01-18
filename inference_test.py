@@ -1,8 +1,17 @@
 """
-Ruibo inference.
-generate embedding, 
+Ruibo test inference. 
+loading the model and convering mols.
 
-暂时用pickle 存结果。chembl 的也不太大
+The data loader returns return ((gs_charge, atom_type, pos, nums_atoms), fps), idxs
+all of them are lists
+
+原始数据包括 array, fp, idx
+array 可以从 from_mol_to_array() 得
+转换写在 ZINCH5Dataloader._get_batch
+把 array 转化成 (gs_charge, atom_type, pos, nums_atoms)
+
+infer() 输入的array 包括  gs_charge, atom_type, pos, nums_atoms
+需要 from_mol_to_array() -> 转换 -> (gs_charge, atom_type, pos, nums_atoms) tuple 格式
 """
 
 import torch
@@ -14,8 +23,6 @@ from data.force_field import from_mol_to_array
 
 from torch.utils.data import Dataset, DataLoader
 
-from fire import Fire
-import pickle
 #%%
 class ChEMBLE_Data(Dataset):
     def __init__(self, batch_array, batch_fp, batch_idx):
@@ -86,16 +93,41 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         atom_type += array[1]
         pos += array[2]
         return (gs_charge, atom_type, pos, nums_atoms)
-    
 #%%
-def main(df_path: str, output_path: str):
-    df = pd.read_table(df_path, index_col=0)
-    tensor = convert_df_to_array_batch(df)
-    arr = tensor.cpu().numpy()
-    with open(output_path, 'wb') as f:
-        pickle.dump(arr, f)
-    
-#%%
+
 if __name__ == "__main__":
-    Fire(main)
+    
+    df = pd.read_table("G:/topological_regression/data/ChEMBL/test_data.txt", index_col=0).iloc[:10]
+    # list of field arrays fps
+    array_list = []
+    fp_list = np.zeros((len(df), 1024))
+    i = 0
+    for idx, each_row in df.iterrows():
+        mol = MolFromSmiles(each_row["Smiles"])
+        molh = AddHs(mol)
+        AllChem.EmbedMolecule(molh)
+        arr = from_mol_to_array(molh)
+        array_list.append(arr)
+        
+        fp2 = AllChem.GetMorganFingerprintAsBitVect(molh, 2, nBits=1024)
+        DataStructs.ConvertToNumpyArray(fp2, fp_list[i])
+
+    idx_list = df.index.to_list()
+    
+    dataset = ChEMBLE_Data(array_list, fp_list, idx_list)
+
+
+    model = ForceFieldCapsNet(num_digit_caps=1024)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
+
+    checkpoint = torch.load("tf3p_trained_models/TF3P-ECFP4-b1024-GS50-W5.pt")
+    model.load_state_dict(checkpoint)
+
+
+    array_to_infer = dataset.get_array()
+    embed = model.infer(array_to_infer)
+    
+
+    array_to_infer2 = convert_df_to_array_batch(df)
+    embed2 = model.infer(array_to_infer)
 
