@@ -112,7 +112,10 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
 
     model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
     # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
-    checkpoint = torch.load(model_path)
+    try:
+        checkpoint = torch.load(model_path)
+    except RuntimeError:
+        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint)
 
     tensor = model.infer(array)
