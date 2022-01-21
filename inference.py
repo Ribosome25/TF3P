@@ -107,7 +107,7 @@ def main(df_path: str, output_path: str, model_path="tf3p_trained_models/TF3P-EC
 def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1024-GS50-W5.pt"):
     data_txt = [x for x in os.listdir(wd) if x.endswith('txt')]
     assert(len(data_txt) == 1), "Found no or more than one txt file in this folder."
-    df = pd.read_table(data_txt[0], index_col=0)
+    df = pd.read_table(os.path.join(wd, data_txt[0]), index_col=0)
     array = convert_df_to_array_batch(df)
 
     model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
