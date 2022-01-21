@@ -5,6 +5,7 @@ generate embedding,
 暂时用pickle 存结果。chembl 的也不太大
 """
 
+import os
 import torch
 import pandas as pd
 import numpy as np
@@ -95,7 +96,17 @@ def main(df_path: str, output_path: str):
     with open(output_path, 'wb') as f:
         pickle.dump(arr, f)
     
+
+def main_for_topo_project(wd: str):
+    data_txt = [x for x in os.listdir(wd) if x.endswith('txt')]
+    assert(len(data_txt) == 1), "Found no or more than one txt file in this folder."
+    df = pd.read_table(data_txt[0], index_col=0)
+    tensor = convert_df_to_array_batch(df)
+    arr = tensor.cpu().numpy()
+    np.save(os.path.join(wd, "data_TF3P.npy"), arr)
+    
 #%%
 if __name__ == "__main__":
-    Fire(main)
+    # Fire(main)
+    Fire(main_for_topo_project)
 
