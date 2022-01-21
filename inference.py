@@ -100,7 +100,7 @@ def main(df_path: str, output_path: str):
 def main_for_topo_project(wd: str):
     data_txt = [x for x in os.listdir(wd) if x.endswith('txt')]
     assert(len(data_txt) == 1), "Found no or more than one txt file in this folder."
-    df = pd.read_table(data_txt[0], index_col=0)
+    df = pd.read_table(os.path.join(wd, data_txt[0]), index_col=0)
     tensor = convert_df_to_array_batch(df)
     arr = tensor.cpu().numpy()
     np.save(os.path.join(wd, "data_TF3P.npy"), arr)
