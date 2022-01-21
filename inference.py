@@ -89,19 +89,33 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
     return (gs_charge, atom_type, pos, nums_atoms)
     
 #%%
-def main(df_path: str, output_path: str):
+def main(df_path: str, output_path: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1024-GS50-W5.pt"):
     df = pd.read_table(df_path, index_col=0)
-    tensor = convert_df_to_array_batch(df)
+    array = convert_df_to_array_batch(df)
+
+    model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint)
+
+    tensor = model.infer(array)
     arr = tensor.cpu().numpy()
     with open(output_path, 'wb') as f:
         pickle.dump(arr, f)
     
 
-def main_for_topo_project(wd: str):
+def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1024-GS50-W5.pt"):
     data_txt = [x for x in os.listdir(wd) if x.endswith('txt')]
     assert(len(data_txt) == 1), "Found no or more than one txt file in this folder."
     df = pd.read_table(data_txt[0], index_col=0)
-    tensor = convert_df_to_array_batch(df)
+    array = convert_df_to_array_batch(df)
+
+    model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint)
+
+    tensor = model.infer(array)
     arr = tensor.cpu().numpy()
     np.save(os.path.join(wd, "data_TF3P.npy"), arr)
     
