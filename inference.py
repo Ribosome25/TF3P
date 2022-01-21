@@ -86,7 +86,7 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         gs_charge += array[0]
         atom_type += array[1]
         pos += array[2]
-        return (gs_charge, atom_type, pos, nums_atoms)
+    return (gs_charge, atom_type, pos, nums_atoms)
     
 #%%
 def main(df_path: str, output_path: str):
