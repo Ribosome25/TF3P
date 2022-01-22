@@ -112,7 +112,7 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
     array_list = []
     batch_size = 100
     n_batch = int(len(df) / batch_size) + 1
-    for each_df in np.split(df, n_batch):
+    for each_df in np.array_split(df, n_batch):
         array = convert_df_to_array_batch(each_df)
     
         model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
