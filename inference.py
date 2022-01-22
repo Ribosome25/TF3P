@@ -108,20 +108,26 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
     data_txt = [x for x in os.listdir(wd) if x.endswith('txt')]
     assert(len(data_txt) == 1), "Found no or more than one txt file in this folder."
     df = pd.read_table(os.path.join(wd, data_txt[0]), index_col=0)
-    array = convert_df_to_array_batch(df)
-
-    model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
-    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
-    try:
-        checkpoint = torch.load(model_path)
-    except RuntimeError:
-        checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
-    model.load_state_dict(checkpoint)
-
-    tensor = model.infer(array)
-    arr = tensor.cpu().numpy()
-    np.save(os.path.join(wd, "data_TF3P.npy"), arr)
     
+    array_list = []
+    batch_size = 100
+    n_batch = int(len(df) / batch_size) + 1
+    for each_df in np.split(df, n_batch):
+        array = convert_df_to_array_batch(each_df)
+    
+        model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
+        # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
+        try:
+            checkpoint = torch.load(model_path)
+        except RuntimeError:
+            checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint)
+    
+        tensor = model.infer(array)
+        arr = tensor.cpu().numpy()
+        array_list.append(arr)
+    np.save(os.path.join(wd, "data_TF3P.npy"), np.vstack(array_list))
+
 #%%
 if __name__ == "__main__":
     # Fire(main)

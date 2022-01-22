@@ -92,12 +92,12 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         gs_charge += array[0]
         atom_type += array[1]
         pos += array[2]
-    return (gs_charge, atom_type, pos, nums_atoms)
-#%%
+    return (gs_charge, atom_type, pos, nums_atoms), arr
 
+#%%
 if __name__ == "__main__":
     
-    df = pd.read_table("G:/topological_regression/data/ChEMBL/test_data.txt", index_col=0).iloc[:10]
+    df = pd.read_table("G:/topological_regression/data/ChEMBL/test_data.txt", index_col=0).iloc[:2]
     # list of field arrays fps
     array_list = []
     fp_list = np.zeros((len(df), 1024))
@@ -106,17 +106,28 @@ if __name__ == "__main__":
         mol = MolFromSmiles(each_row["Smiles"])
         molh = AddHs(mol)
         AllChem.EmbedMolecule(molh)
-        arr = from_mol_to_array(molh)
-        array_list.append(arr)
-        
+        arr1 = from_mol_to_array(molh)
+        array_list.append(arr1)
+
         fp2 = AllChem.GetMorganFingerprintAsBitVect(molh, 2, nBits=1024)
         DataStructs.ConvertToNumpyArray(fp2, fp_list[i])
 
     idx_list = df.index.to_list()
-    
     dataset = ChEMBLE_Data(array_list, fp_list, idx_list)
+    array_to_infer = dataset.get_array()
 
 
+    array_to_infer2, arr2 = convert_df_to_array_batch(df)
+
+    #%%
+    test_list = []
+    for ii in range(10):
+        molh = AddHs(mol)
+        AllChem.EmbedMolecule(molh)  # 每次All Chem embed 之后位置都不一样
+        arr_test = from_mol_to_array(molh)[2]
+        test_list.append(arr_test)
+    raise
+    #%%
     model = ForceFieldCapsNet(num_digit_caps=1024)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
 
@@ -124,10 +135,9 @@ if __name__ == "__main__":
     model.load_state_dict(checkpoint)
 
 
-    array_to_infer = dataset.get_array()
     embed = model.infer(array_to_infer)
     
 
-    array_to_infer2 = convert_df_to_array_batch(df)
+    embed1 = model.infer(array_to_infer)
     embed2 = model.infer(array_to_infer2)
 
