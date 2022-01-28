@@ -76,6 +76,10 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         molh = AddHs(mol)
         AllChem.EmbedMolecule(molh)
         arr = from_mol_to_array(molh)
+        # Sometimes get a None for no reason? Embedding should be random. 
+        while arr is None:
+            AllChem.EmbedMolecule(molh)
+            arr = from_mol_to_array(molh)            
         array_list.append(arr)
     idx_list = df.index.to_list()
 
