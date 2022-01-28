@@ -112,14 +112,16 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
     array_list = []
     batch_size = 100
     n_batch = int(len(df) / batch_size) + 1
+    
+    device = torch.device("cuda:0")
     for each_df in np.array_split(df, n_batch):
         array = convert_df_to_array_batch(each_df)
     
         model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
         # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
-        checkpoint = torch.load(model_path)
+        checkpoint = torch.load(model_path, map_location=device)
         model.load_state_dict(checkpoint)
-    
+        model.to(device)
         tensor = model.infer(array)
         arr = tensor.cpu().numpy()
         array_list.append(arr)
