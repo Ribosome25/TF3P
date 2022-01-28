@@ -76,10 +76,19 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         molh = AddHs(mol)
         AllChem.EmbedMolecule(molh)
         arr = from_mol_to_array(molh)
+        
         # Sometimes get a None for no reason? Embedding should be random. 
+        _n = 0
         while arr is None:
             AllChem.EmbedMolecule(molh)
-            arr = from_mol_to_array(molh)            
+            arr = from_mol_to_array(molh)     
+            _n += 1
+            if _n > 10:
+                with open("Failed_to_gen_TF3P_log.txt", 'a') as f:
+                    f.write(str(idx) + "\n")
+                    f.write(each_row["Smiles"] + "\n")
+                break
+                
         array_list.append(arr)
     idx_list = df.index.to_list()
 
