@@ -148,7 +148,7 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
     for each in failed_list:
         results[df.index.get_loc(each)] = np.nan
 
-    print(results[:5])
+    # print(results[:5])
     np.save(os.path.join(wd, "data_TF3P.npy"), results)
 
 #%%
