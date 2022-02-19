@@ -71,6 +71,7 @@ class ChEMBLE_Data(Dataset):
 def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
     # 可能不需要一批一批处理，应该是单个的，但一批的可以用，不改了。
     array_list = []
+    failed_idxs = []
     for idx, each_row in df.iterrows():
         mol = MolFromSmiles(each_row["Smiles"])
         molh = AddHs(mol)
@@ -84,11 +85,13 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
             arr = from_mol_to_array(molh)     
             _n += 1
             if _n > 10:
+                print("\tFailed_to_gen_TF3P:", idx)
                 with open("Failed_to_gen_TF3P_log.txt", 'a') as f:
                     f.write(str(idx) + "\n")
                     f.write(each_row["Smiles"] + "\n")
-                break
-                
+                arr = [[0], [0], [[0, 0, 0]]]  # dummy molecule
+                failed_idxs.append(idx)
+
         array_list.append(arr)
     idx_list = df.index.to_list()
 
@@ -99,12 +102,12 @@ def convert_df_to_array_batch(df: pd.DataFrame) -> tuple:
         gs_charge += array[0]
         atom_type += array[1]
         pos += array[2]
-    return (gs_charge, atom_type, pos, nums_atoms)
+    return (gs_charge, atom_type, pos, nums_atoms), failed_idxs
     
 #%%
 def main(df_path: str, output_path: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1024-GS50-W5.pt"):
     df = pd.read_table(df_path, index_col=0)
-    array = convert_df_to_array_batch(df)
+    array, _ = convert_df_to_array_batch(df)
 
     model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
     # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
@@ -123,12 +126,13 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
     df = pd.read_table(os.path.join(wd, data_txt[0]), index_col=0)
     
     array_list = []
-    batch_size = 100
+    failed_list = []
+    batch_size = 10
     n_batch = int(len(df) / batch_size) + 1
-    
+
     device = torch.device("cuda:0")
     for each_df in np.array_split(df, n_batch):
-        array = convert_df_to_array_batch(each_df)
+        array, failed = convert_df_to_array_batch(each_df)
     
         model = ForceFieldCapsNet(num_digit_caps=1024)  # more flexibility later
         # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) # change to whatever optimizer was used
@@ -138,7 +142,14 @@ def main_for_topo_project(wd: str, model_path="tf3p_trained_models/TF3P-ECFP4-b1
         tensor = model.infer(array)
         arr = tensor.cpu().numpy()
         array_list.append(arr)
-    np.save(os.path.join(wd, "data_TF3P.npy"), np.vstack(array_list))
+        failed_list.extend(failed)
+    
+    results = np.vstack(array_list)
+    for each in failed_list:
+        results[df.index.get_loc(each)] = np.nan
+
+    print(results[:5])
+    np.save(os.path.join(wd, "data_TF3P.npy"), results)
 
 #%%
 if __name__ == "__main__":
